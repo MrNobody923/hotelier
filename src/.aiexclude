@@ -1,0 +1,45 @@
+# ==========================================
+# Node.js / React / JavaScript
+# ==========================================
+node_modules/
+build/
+dist/
+out/
+coverage/
+
+# Lockfiles (These are massive and the AI doesn't need them to write code)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ==========================================
+# PHP / Composer
+# ==========================================
+vendor/
+composer.lock
+.phpunit.result.cache
+
+# ==========================================
+# Logs & Caches
+# ==========================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+.parcel-cache/
+
+# ==========================================
+# Environment & Sensitive Files
+# ==========================================
+.env
+.env.*
+*.pem
+
+# ==========================================
+# OS & IDE Files
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
