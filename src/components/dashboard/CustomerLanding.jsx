@@ -1,10 +1,50 @@
 import { useState } from "react";
-import { UserCheck, BedDouble, CookingPot, Building, Users, LayoutDashboard } from "lucide-react";
+import { UserCheck, BedDouble, CookingPot, Building, Users, LayoutDashboard, CreditCard, Wallet, Calendar, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { motion, AnimatePresence } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 export default function CustomerLanding({ onDashboardReserve }) {
   const [checkIn, setCheckIn] = useState("2026-03-23");
   const [checkOut, setCheckOut] = useState("2026-03-25");
+  const [isCheckoutOpen, setCheckoutOpen] = useState(false);
+  const [selectedExperience, setSelectedExperience] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("card");
+
+  const experiences = [
+    { id: 1, name: "Luxury Suite at Central Hub", price: 526, img: "/villa_main_pool.png", guests: 2, size: "700 sq ft" },
+    { id: 2, name: "Ocean View Suite", price: 350, img: "/ocean_view_suite.png", guests: 2, size: "450 sq ft" },
+    { id: 3, name: "Presidential Penthouse", price: 1200, img: "/presidential_penthouse.png", guests: 6, size: "2000 sq ft" },
+    { id: 4, name: "Zen Garden Room", price: 280, img: "/garden_room.png", guests: 2, size: "350 sq ft" }
+  ];
+
+  const handleOpenCheckout = (exp) => {
+    setSelectedExperience(exp);
+    setCheckoutOpen(true);
+  };
+
+  const handleFinalReserve = () => {
+    if (onDashboardReserve) {
+      onDashboardReserve(checkIn, checkOut);
+      setCheckoutOpen(false);
+    }
+  };
+
+  const calculateTotal = (price) => {
+    const subtotal = price * 2;
+    const cleaning = 250;
+    const taxes = Math.round(subtotal * 0.12);
+    return { subtotal, cleaning, taxes, total: subtotal + cleaning + taxes };
+  };
 
   return (
     <div className="bg-[#fcfbfd] p-6 lg:p-8 rounded-[2.5rem] shadow-sm border border-purple-100/50">
@@ -72,7 +112,7 @@ export default function CustomerLanding({ onDashboardReserve }) {
               </div>
               <Button 
                 className="bg-[#6450f1] hover:bg-[#523ee0] text-white rounded-xl px-8 py-6 font-bold shadow-md shadow-indigo-200 transition-all"
-                onClick={() => onDashboardReserve && onDashboardReserve(checkIn, checkOut)}
+                onClick={() => handleOpenCheckout(experiences[0])}
               >
                 Reserve
               </Button>
@@ -102,22 +142,22 @@ export default function CustomerLanding({ onDashboardReserve }) {
 
             <div className="space-y-3.5 text-sm font-medium text-slate-500 mb-5 border-b border-slate-100 pb-5">
               <div className="flex justify-between">
-                <span className="underline decoration-slate-300 underline-offset-2">$526 x 2 nights</span>
-                <span className="text-slate-800">$1052</span>
+                <span className="underline decoration-slate-300 underline-offset-2">₱526 x 2 nights</span>
+                <span className="text-slate-800">₱1,052</span>
               </div>
               <div className="flex justify-between">
                 <span className="underline decoration-slate-300 underline-offset-2">Cleaning fee</span>
-                <span className="text-slate-800">$25</span>
+                <span className="text-slate-800">₱250</span>
               </div>
               <div className="flex justify-between">
                 <span className="underline decoration-slate-300 underline-offset-2">Taxes</span>
-                <span className="text-slate-800">$50</span>
+                <span className="text-slate-800">₱126</span>
               </div>
             </div>
 
             <div className="flex justify-between font-extrabold text-[1.1rem] text-[#2d2a3c]">
               <span>Total</span>
-              <span>$1127</span>
+              <span>₱1,428</span>
             </div>
           </div>
         </div>
@@ -133,86 +173,176 @@ export default function CustomerLanding({ onDashboardReserve }) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* CARD 1 */}
-          <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group cursor-pointer flex flex-col h-full">
-            <div className="aspect-[4/3] rounded-[1.5rem] overflow-hidden mb-5 relative">
-              <img src="/ocean_view_suite.png" alt="Ocean View Suite" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-slate-800 shadow-sm flex items-center">
-                <BedDouble className="w-3.5 h-3.5 mr-1.5 text-[#6450f1]" /> 1 King Bed
-              </div>
-            </div>
-            <div className="px-2 flex flex-col flex-grow">
-              <h3 className="text-xl font-bold text-[#2d2a3c] mb-2" style={{ fontFamily: "Georgia, serif" }}>Ocean View Suite</h3>
-              <div className="flex gap-3 text-xs font-medium text-slate-500 mb-4">
-                <span className="flex items-center"><Users className="w-3.5 h-3.5 mr-1 text-slate-400" /> 2 Guests</span>
-                <span className="flex items-center"><LayoutDashboard className="w-3.5 h-3.5 mr-1 text-slate-400" /> 450 sq ft</span>
-              </div>
-              <div className="flex justify-between items-center border-t border-slate-100 pt-4 mt-auto">
-                <div>
-                  <span className="text-xl font-bold text-[#6450f1]">$350</span>
-                  <span className="text-xs text-slate-400 ml-1">/night</span>
+          {experiences.slice(1).map((exp) => (
+            <div key={exp.id} className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group cursor-pointer flex flex-col h-full">
+              <div className="aspect-[4/3] rounded-[1.5rem] overflow-hidden mb-5 relative">
+                <img src={exp.img} alt={exp.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-slate-800 shadow-sm flex items-center">
+                  <BedDouble className="w-3.5 h-3.5 mr-1.5 text-[#6450f1]" /> 1 King Bed
                 </div>
-                <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-[#f7f5fa] hover:text-[#6450f1] hover:border-[#6450f1] font-semibold text-xs py-1 transition-colors" onClick={() => onDashboardReserve && onDashboardReserve(checkIn, checkOut)}>
-                  Reserve
-                </Button>
               </div>
-            </div>
-          </div>
-
-          {/* CARD 2 */}
-          <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group cursor-pointer flex flex-col h-full">
-            <div className="aspect-[4/3] rounded-[1.5rem] overflow-hidden mb-5 relative">
-              <img src="/presidential_penthouse.png" alt="Presidential Penthouse" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute top-4 right-4 bg-[#6450f1] px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-sm flex items-center tracking-wide">
-                 SIGNATURE
-              </div>
-            </div>
-            <div className="px-2 flex flex-col flex-grow">
-              <h3 className="text-xl font-bold text-[#2d2a3c] mb-2" style={{ fontFamily: "Georgia, serif" }}>Presidential Penthouse</h3>
-              <div className="flex gap-3 text-xs font-medium text-slate-500 mb-4">
-                <span className="flex items-center"><Users className="w-3.5 h-3.5 mr-1 text-slate-400" /> 6 Guests</span>
-                <span className="flex items-center"><LayoutDashboard className="w-3.5 h-3.5 mr-1 text-slate-400" /> 2000 sq ft</span>
-              </div>
-              <div className="flex justify-between items-center border-t border-slate-100 pt-4 mt-auto">
-                <div>
-                  <span className="text-xl font-bold text-[#6450f1]">$1,200</span>
-                  <span className="text-xs text-slate-400 ml-1">/night</span>
+              <div className="px-2 flex flex-col flex-grow">
+                <h3 className="text-xl font-bold text-[#2d2a3c] mb-2" style={{ fontFamily: "Georgia, serif" }}>{exp.name}</h3>
+                <div className="flex gap-3 text-xs font-medium text-slate-500 mb-4">
+                  <span className="flex items-center"><Users className="w-3.5 h-3.5 mr-1 text-slate-400" /> {exp.guests} Guests</span>
+                  <span className="flex items-center"><LayoutDashboard className="w-3.5 h-3.5 mr-1 text-slate-400" /> {exp.size}</span>
                 </div>
-                <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-[#f7f5fa] hover:text-[#6450f1] hover:border-[#6450f1] font-semibold text-xs py-1 transition-colors" onClick={() => onDashboardReserve && onDashboardReserve(checkIn, checkOut)}>
-                  Reserve
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* CARD 3 */}
-          <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group cursor-pointer flex flex-col h-full">
-            <div className="aspect-[4/3] rounded-[1.5rem] overflow-hidden mb-5 relative">
-              <img src="/garden_room.png" alt="Zen Garden Room" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-slate-800 shadow-sm flex items-center">
-                <BedDouble className="w-3.5 h-3.5 mr-1.5 text-[#6450f1]" /> 1 Queen Bed
-              </div>
-            </div>
-            <div className="px-2 flex flex-col flex-grow">
-              <h3 className="text-xl font-bold text-[#2d2a3c] mb-2" style={{ fontFamily: "Georgia, serif" }}>Zen Garden Room</h3>
-              <div className="flex gap-3 text-xs font-medium text-slate-500 mb-4">
-                <span className="flex items-center"><Users className="w-3.5 h-3.5 mr-1 text-slate-400" /> 2 Guests</span>
-                <span className="flex items-center"><LayoutDashboard className="w-3.5 h-3.5 mr-1 text-slate-400" /> 350 sq ft</span>
-              </div>
-              <div className="flex justify-between items-center border-t border-slate-100 pt-4 mt-auto">
-                <div>
-                  <span className="text-xl font-bold text-[#6450f1]">$280</span>
-                  <span className="text-xs text-slate-400 ml-1">/night</span>
+                <div className="flex justify-between items-center border-t border-slate-100 pt-4 mt-auto">
+                  <div>
+                    <span className="text-xl font-bold text-[#6450f1]">₱{exp.price}</span>
+                    <span className="text-xs text-slate-400 ml-1">/night</span>
+                  </div>
+                  <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-[#f7f5fa] hover:text-[#6450f1] hover:border-[#6450f1] font-semibold text-xs py-1 transition-colors" onClick={() => handleOpenCheckout(exp)}>
+                    Reserve
+                  </Button>
                 </div>
-                <Button variant="outline" className="rounded-xl border-slate-200 hover:bg-[#f7f5fa] hover:text-[#6450f1] hover:border-[#6450f1] font-semibold text-xs py-1 transition-colors" onClick={() => onDashboardReserve && onDashboardReserve(checkIn, checkOut)}>
-                  Reserve
-                </Button>
               </div>
             </div>
-          </div>
-
+          ))}
         </div>
       </div>
+
+      {/* CHECKOUT MODAL */}
+      <Dialog open={isCheckoutOpen} onOpenChange={setCheckoutOpen}>
+        <DialogContent className="sm:max-w-[850px] p-0 rounded-[3rem] border-0 shadow-2xl overflow-hidden bg-white max-h-[90vh]">
+          {selectedExperience && (
+            <div className="flex flex-col lg:flex-row h-full overflow-hidden">
+              {/* LEFT SIDE: SUMMARY */}
+              <div className="lg:w-1/3 bg-[#2d2a3c] text-white p-8 lg:p-10 flex flex-col">
+                <div className="relative aspect-video rounded-3xl overflow-hidden mb-6 shadow-2xl">
+                  <img src={selectedExperience.img} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                </div>
+                
+                <Badge className="w-fit mb-4 bg-amber-400/90 text-black border-0 uppercase tracking-widest text-[9px] font-bold px-3 py-1">Booking Selection</Badge>
+                <h2 className="text-2xl font-serif font-extrabold mb-4 leading-tight">{selectedExperience.name}</h2>
+                
+                <div className="space-y-4 mt-auto">
+                   <div className="flex items-center text-sm font-semibold text-white/60">
+                      <Calendar className="w-4 h-4 mr-3" /> {checkIn} - {checkOut}
+                   </div>
+                   <div className="flex items-center text-sm font-semibold text-white/60">
+                      <Users className="w-4 h-4 mr-3" /> {selectedExperience.guests} Professional Guests
+                   </div>
+                   
+                   <div className="pt-6 border-t border-white/10">
+                     <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4 block">Pricing Details</span>
+                     <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                           <span className="text-white/60">₱{selectedExperience.price} x 2 Nights</span>
+                           <span className="font-bold">₱{calculateTotal(selectedExperience.price).subtotal}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                           <span className="text-white/60">Luxury Taxes</span>
+                           <span className="font-bold">₱{calculateTotal(selectedExperience.price).taxes}</span>
+                        </div>
+                        <div className="flex justify-between text-lg pt-4 border-t border-white/10">
+                           <span className="font-serif font-bold">Total Stay</span>
+                           <span className="font-extrabold text-amber-400">₱{calculateTotal(selectedExperience.price).total}</span>
+                        </div>
+                     </div>
+                   </div>
+                </div>
+              </div>
+
+              {/* RIGHT SIDE: PAYMENT FORM */}
+              <div className="lg:w-2/3 p-8 lg:p-10 overflow-y-auto bg-white" style={{ maxHeight: '90vh' }}>
+                <DialogHeader className="mb-6">
+                  <DialogTitle className="text-3xl font-serif font-extrabold text-[#2d2a3c]">Complete Reservation</DialogTitle>
+                  <DialogDescription className="text-slate-500 font-medium pt-1 italic text-xs">A moment away from sanctuary.</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] pl-1">Full Identity</Label>
+                       <Input className="rounded-xl border-slate-100 bg-slate-50/50 p-5 font-semibold" placeholder="e.g., Jonathan Wick" />
+                    </div>
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] pl-1">Contact Email</Label>
+                       <Input className="rounded-xl border-slate-100 bg-slate-50/50 p-5 font-semibold" placeholder="j.wick@continental.com" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] pl-1">Phone Number</Label>
+                    <div className="relative">
+                      <Input className="rounded-xl border-slate-100 bg-slate-50/50 p-5 font-semibold pl-12" placeholder="+63 9XX XXX XXXX" />
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold border-r pr-3 border-slate-200">🇵🇭</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] pl-1 mb-3 block">Payment Method</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div 
+                         onClick={() => setPaymentMethod("card")}
+                         className={`cursor-pointer p-5 rounded-[1.5rem] border-2 transition-all flex items-center gap-4 ${paymentMethod === 'card' ? 'border-[#6450f1] bg-[#6450f1]/5' : 'border-slate-100 hover:border-slate-300'}`}
+                       >
+                         <div className={`p-3 rounded-xl ${paymentMethod === 'card' ? 'bg-[#6450f1] text-white' : 'bg-slate-100 text-slate-400'}`}>
+                           <CreditCard className="w-5 h-5" />
+                         </div>
+                         <span className={`font-bold ${paymentMethod === 'card' ? 'text-[#6450f1]' : 'text-slate-500'}`}>Card</span>
+                       </div>
+                       <div 
+                         onClick={() => setPaymentMethod("e-wallet")}
+                         className={`cursor-pointer p-5 rounded-[1.5rem] border-2 transition-all flex items-center gap-4 ${paymentMethod === 'e-wallet' ? 'border-[#6450f1] bg-[#6450f1]/5' : 'border-slate-100 hover:border-slate-300'}`}
+                       >
+                         <div className={`p-3 rounded-xl ${paymentMethod === 'e-wallet' ? 'bg-[#6450f1] text-white' : 'bg-slate-100 text-slate-400'}`}>
+                           <Wallet className="w-5 h-5" />
+                         </div>
+                         <span className={`font-bold ${paymentMethod === 'e-wallet' ? 'text-[#6450f1]' : 'text-slate-500'}`}>E-Wallet</span>
+                       </div>
+                    </div>
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    {paymentMethod === 'card' ? (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-4"
+                      >
+                         <div className="space-y-2">
+                           <Label className="text-xs font-bold text-slate-400 pl-1 uppercase tracking-widest">Card Details</Label>
+                           <Input className="rounded-2xl border-slate-100 bg-slate-50/50 p-6 font-mono" placeholder="0000 0000 0000 0000" />
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                           <Input className="rounded-2xl border-slate-100 bg-slate-50/50 p-6" placeholder="MM/YY" />
+                           <Input className="rounded-2xl border-slate-100 bg-slate-50/50 p-6" placeholder="CVC" />
+                         </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        exit={{ opacity: 0, y: -10 }}
+                        className="p-6 bg-slate-50 rounded-[1.5rem] flex items-center gap-4 border border-slate-100"
+                      >
+                         <div className="bg-white p-3 rounded-2xl shadow-sm italic font-bold text-[#6450f1]">G)</div>
+                         <p className="text-sm font-medium text-slate-600">You will be redirected to <span className="font-bold text-slate-900">GCash/Maya</span> to complete your authentication.</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="pt-2 flex flex-col gap-4">
+                    <div className="flex items-center gap-3 text-xs text-green-600 font-bold bg-green-50/80 p-3 rounded-xl border border-green-100">
+                       <ShieldCheck className="w-3.5 h-3.5" /> Secure SSL Encrypted System
+                    </div>
+                    <Button 
+                      className="w-full bg-[#6450f1] text-white py-8 rounded-2xl font-black text-lg shadow-xl shadow-indigo-500/20 hover:bg-[#523ee0] transition-all transform active:scale-95 mb-4"
+                      onClick={handleFinalReserve}
+                    >
+                      Process ₱{calculateTotal(selectedExperience.price).total}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

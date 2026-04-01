@@ -36,9 +36,11 @@ if ($data) {
     $quantity = $data['quantity'] ?? 1;
     $special_instructions = $data['special_instructions'] ?? '';
     
-    $stmt = $conn->prepare("INSERT INTO food_orders (guest_name, room_number, item_name, quantity, special_instructions) VALUES (?, ?, ?, ?, ?)");
+    $status = $data['status'] ?? 'Pending';
+    
+    $stmt = $conn->prepare("INSERT INTO food_orders (guest_name, room_number, item_name, quantity, special_instructions, status) VALUES (?, ?, ?, ?, ?, ?)");
     if ($stmt) {
-        $stmt->bind_param("sssis", $guest_name, $room_number, $item_name, $quantity, $special_instructions);
+        $stmt->bind_param("ssisss", $guest_name, $room_number, $item_name, $quantity, $special_instructions, $status);
         if ($stmt->execute()) {
             echo json_encode(["message" => "Order placed successfully!"]);
         } else {

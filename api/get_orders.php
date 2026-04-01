@@ -15,18 +15,19 @@ if ($conn->connect_error) {
     die(json_encode(["error" => "Connection failed: " . $conn->connect_error]));
 }
 
-$sql = "SELECT id, guest_name, room_number, item_name, quantity, special_instructions, created_at FROM food_orders ORDER BY created_at DESC";
+$sql = "SELECT id, guest_name, room_number, item_name, quantity, special_instructions, status, created_at FROM food_orders ORDER BY created_at DESC";
 $result = $conn->query($sql);
 
 $orders = [];
-if ($result && $result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-        $orders[] = $row;
+if ($result) {
+    if ($result->num_rows > 0) {
+        while($row = $result->fetch_assoc()) {
+            $orders[] = $row;
+        }
     }
     echo json_encode($orders);
 } else {
-    // If table doesn't exist or has different columns, return empty or dummy
-    echo json_encode([]);
+    echo json_encode(["error" => "Query failed: " . $conn->error]);
 }
 
 $conn->close();

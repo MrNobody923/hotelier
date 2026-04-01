@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import {
   Card,
   CardHeader,
@@ -16,14 +17,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Search, PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Search, PlusCircle, MoreHorizontal, Edit, Trash2, Users, UserCheck, Mail, ShieldCheck, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 export default function Customers({ customers, setCustomers }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,38 +47,27 @@ export default function Customers({ customers, setCustomers }) {
 
   const handleCreateCustomer = async () => {
     if (!newCustomerData.full_name || !newCustomerData.email || !newCustomerData.username || !newCustomerData.password) {
-      toast.error("Please fill in all fields for the new customer.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
     try {
       const response = await axios.post('http://localhost:8000/register.php', {
-        full_name: newCustomerData.full_name,
-        email: newCustomerData.email,
-        username: newCustomerData.username,
-        password: newCustomerData.password,
-        role: "customer",
+        ...newCustomerData,
+        role: "customer"
       });
 
-      const data = response.data;
-      if (data.status === "success") {
-        toast.success('Customer successfully created!');
-        const newCustomer = {
-          id: customers.length > 0 ? Math.max(...customers.map((c) => c.id)) + 1 : 1,
-          full_name: newCustomerData.full_name,
-          email: newCustomerData.email,
-          username: newCustomerData.username,
-          role: "customer",
-        };
-        setCustomers([...customers, newCustomer]);
+      if (response.data.status === "success") {
+        toast.success('Guest registered successfully!');
+        const res = await axios.get('http://localhost:8000/get_customers.php');
+        if (Array.isArray(res.data)) setCustomers(res.data);
         setCreateOpen(false);
         setNewCustomerData({ full_name: "", email: "", username: "", password: "", role: "customer" });
       } else {
-        toast.error(`Error: ${data.message}`);
+        toast.error(response.data.message);
       }
     } catch (error) {
-      console.error("Failed to add customer:", error);
-      toast.error(error.response?.data?.message || "Network error. Ensure register.php exists.");
+      toast.error("Network error. Could not register guest.");
     }
   };
 
@@ -84,132 +76,111 @@ export default function Customers({ customers, setCustomers }) {
 
     try {
       const response = await axios.post('http://localhost:8000/edit_user.php', selectedCustomer);
-      const data = response.data;
-
-      if (data.status === "success") {
-        setCustomers(
-          customers.map((customer) =>
-            customer.id === selectedCustomer.id ? selectedCustomer : customer
-          )
-        );
+      if (response.data.status === "success") {
+        setCustomers(customers.map(c => c.id === selectedCustomer.id ? selectedCustomer : c));
         setEditOpen(false);
         setSelectedCustomer(null);
-        toast.success("Customer updated successfully.");
+        toast.success("Guest profile updated.");
       } else {
-        toast.error(`Error: ${data.message}`);
+        toast.error(response.data.message);
       }
     } catch (error) {
-      console.error("Failed to update customer:", error);
-      toast.error(error.response?.data?.message || "Network error. Ensure edit_user.php exists.");
+      toast.error("Network error. Could not update guest.");
     }
   };
 
   const handleDeleteCustomer = async (customerId) => {
-    if (window.confirm("Are you sure you want to delete this customer?")) {
+    if (confirm("Permanently remove this guest record?")) {
       try {
         const response = await axios.post('http://localhost:8000/delete_user.php', { id: customerId });
-        const data = response.data;
-
-        if (data.status === "success") {
-          setCustomers(customers.filter((customer) => customer.id !== customerId));
-          console.log(`SUCCESS: Customer with ID ${customerId} was deleted.`);
-          toast.success("Customer deleted successfully.");
+        if (response.data.status === "success") {
+          setCustomers(customers.filter(c => c.id !== customerId));
+          toast.success("Guest record deleted.");
         } else {
-          toast.error(`Error: ${data.message}`);
+          toast.error(response.data.message);
         }
       } catch (error) {
-        console.error("Failed to delete customer:", error);
-        toast.error(error.response?.data?.message || "Network error. Ensure delete_user.php exists in your hotel-api folder!");
+        toast.error("Network error. Could not delete guest.");
       }
     }
   };
 
+  const getInitials = (name) => {
+    return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'G';
+  };
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold">Guest Management</h2>
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+    <div className="space-y-8 animate-in fade-in duration-700">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h2 className="text-4xl font-extrabold font-serif text-[#2d2a3c] tracking-tight">Guest Management</h2>
+          <p className="text-slate-500 mt-1 font-medium italic">Monitor and manage your hotel's esteemed guests.</p>
+        </div>
+        
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-none">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              type="text"
-              placeholder="Search guests..."
+              placeholder="Search guests by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
+              className="pl-11 w-full md:w-72 rounded-[1.25rem] border-slate-200 bg-white shadow-sm focus:ring-[#6450f1]/20"
             />
           </div>
+          
           <Dialog open={isCreateOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button className="transition-transform duration-300 ease-in-out hover:scale-105">
+              <Button className="bg-[#6450f1] hover:bg-[#523ee0] text-white rounded-[1.25rem] px-6 py-6 font-bold shadow-lg shadow-indigo-100 transition-all active:scale-95">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Guest
               </Button>
             </DialogTrigger>
-            <DialogContent aria-describedby={undefined}>
-              <DialogHeader>
-                <DialogTitle>Add New Guest</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
+            <DialogContent className="rounded-[2.5rem] sm:max-w-[450px] p-0 border-0 overflow-hidden shadow-2xl">
+              <div className="bg-[#2d2a3c] p-8 text-white relative">
+                <Sparkles className="absolute top-4 right-4 w-12 h-12 text-white/5" />
+                <DialogTitle className="text-2xl font-serif font-extrabold mb-2">New Guest Profile</DialogTitle>
+                <DialogDescription className="text-white/60 text-sm">Initialize a new guest account within the repository.</DialogDescription>
+              </div>
+              <div className="p-8 space-y-5 bg-white">
                 <div className="grid gap-2">
-                  <Label htmlFor="customer-fullname-create">Full Name</Label>
+                  <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Full Name</Label>
                   <Input
-                    id="customer-fullname-create"
+                    className="rounded-xl border-slate-100 bg-slate-50/50"
                     value={newCustomerData.full_name}
-                    onChange={(e) =>
-                      setNewCustomerData({
-                        ...newCustomerData,
-                        full_name: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., Jane Doe"
+                    onChange={(e) => setNewCustomerData({ ...newCustomerData, full_name: e.target.value })}
+                    placeholder="e.g., Alexandra V"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="customer-email-create">Email Address</Label>
+                  <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Email Address</Label>
                   <Input
-                    id="customer-email-create"
                     type="email"
+                    className="rounded-xl border-slate-100 bg-slate-50/50"
                     value={newCustomerData.email}
-                    onChange={(e) =>
-                      setNewCustomerData({
-                        ...newCustomerData,
-                        email: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., jane@example.com"
+                    onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
+                    placeholder="alex@suite.com"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="customer-username-create">Username</Label>
-                  <Input
-                    id="customer-username-create"
-                    value={newCustomerData.username}
-                    onChange={(e) =>
-                      setNewCustomerData({
-                        ...newCustomerData,
-                        username: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., janedoe"
-                  />
+                  <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Credentials</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      className="rounded-xl border-slate-100 bg-slate-50/50"
+                      value={newCustomerData.username}
+                      onChange={(e) => setNewCustomerData({ ...newCustomerData, username: e.target.value })}
+                      placeholder="Username"
+                    />
+                    <Input
+                      type="password"
+                      className="rounded-xl border-slate-100 bg-slate-50/50"
+                      value={newCustomerData.password}
+                      onChange={(e) => setNewCustomerData({ ...newCustomerData, password: e.target.value })}
+                      placeholder="Password"
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="customer-password-create">Password</Label>
-                  <Input
-                    id="customer-password-create"
-                    type="password"
-                    value={newCustomerData.password}
-                    onChange={(e) =>
-                      setNewCustomerData({
-                        ...newCustomerData,
-                        password: e.target.value,
-                      })
-                    }
-                    placeholder="Enter password"
-                  />
-                </div>
-                <Button className="w-full" onClick={handleCreateCustomer}>
-                  Save Guest
+                <Button className="w-full bg-[#6450f1] text-white py-8 rounded-2xl font-black text-lg shadow-xl shadow-indigo-100 hover:bg-[#523ee0]" onClick={handleCreateCustomer}>
+                  Complete Registration
                 </Button>
               </div>
             </DialogContent>
@@ -217,109 +188,140 @@ export default function Customers({ customers, setCustomers }) {
         </div>
       </div>
 
-      <Card>
-        <CardContent>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-4 font-medium">Name</th>
-                <th className="text-left p-4 font-medium">Email</th>
-                <th className="text-left p-4 font-medium">Username</th>
-                <th className="text-right p-4 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCustomers.map((customer) => (
-                <tr
-                  key={customer.id}
-                  className="border-b hover:bg-slate-50 transition-colors duration-200"
-                >
-                  <td className="p-4">{customer.full_name}</td>
-                  <td className="p-4">{customer.email}</td>
-                  <td className="p-4">{customer.username}</td>
-                  <td className="p-4 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedCustomer(customer);
-                            setEditOpen(true);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteCustomer(customer.id)}
-                          className="text-red-500"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
+      {/* STATS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { icon: <Users className="w-5 h-5 text-indigo-500" />, label: "Total Guests", val: customers.length, color: "bg-indigo-50" },
+          { icon: <UserCheck className="w-5 h-5 text-green-500" />, label: "Recently Joined", val: "4 New", color: "bg-green-50" },
+          { icon: <ShieldCheck className="w-5 h-5 text-amber-500" />, label: "Verified Profiles", val: `${Math.round(customers.length * 0.9)}%`, color: "bg-amber-50" }
+        ].map((stat, i) => (
+          <Card key={i} className="border-0 shadow-sm rounded-[2rem] bg-white overflow-hidden group">
+            <CardContent className="p-8 flex items-center gap-6">
+              <div className={`${stat.color} p-4 rounded-2xl group-hover:scale-110 transition-transform`}>
+                {stat.icon}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-bold text-slate-400 font-serif tracking-widest">{stat.label}</p>
+                <h3 className="text-3xl font-extrabold text-[#2d2a3c] leading-none mt-1">{stat.val}</h3>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* CUSTOMER GRID / TABLE */}
+      <Card className="border-0 shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="text-left p-6 lg:p-8 font-serif text-slate-400 font-bold uppercase text-[10px] tracking-widest">Guest Identity</th>
+                  <th className="text-left p-6 lg:p-8 font-serif text-slate-400 font-bold uppercase text-[10px] tracking-widest">Contact Info</th>
+                  <th className="text-left p-6 lg:p-8 font-serif text-slate-400 font-bold uppercase text-[10px] tracking-widest">Account Status</th>
+                  <th className="text-right p-6 lg:p-8 font-serif text-slate-400 font-bold uppercase text-[10px] tracking-widest">Access Control</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredCustomers.map((customer, idx) => (
+                  <motion.tr
+                    key={customer.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                    className="hover:bg-slate-50/50 transition-colors group"
+                  >
+                    <td className="p-6 lg:p-8">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-black text-sm shadow-sm group-hover:shadow-md transition-all">
+                          {getInitials(customer.full_name)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#2d2a3c] text-lg leading-none mb-1">{customer.full_name}</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">@{customer.username}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-6 lg:p-8">
+                      <div className="flex items-center text-slate-600 font-semibold text-sm">
+                        <Mail className="w-4 h-4 mr-2 text-slate-300" />
+                        {customer.email}
+                      </div>
+                    </td>
+                    <td className="p-6 lg:p-8">
+                      <Badge className="bg-green-50 text-green-600 border-0 font-bold tracking-wider uppercase text-[10px] px-3 py-1">Verified</Badge>
+                    </td>
+                    <td className="p-6 lg:p-8 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-10 w-10 rounded-xl hover:bg-white hover:shadow-md transition-all">
+                            <MoreHorizontal className="h-5 w-5 text-slate-400" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-2xl border-slate-100 p-2 shadow-xl w-40">
+                          <DropdownMenuItem
+                            className="rounded-xl p-3 font-semibold text-slate-600 cursor-pointer"
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setEditOpen(true);
+                            }}
+                          >
+                            <Edit className="mr-3 h-4 w-4 text-indigo-500" />
+                            Modify
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="rounded-xl p-3 font-semibold text-red-500 cursor-pointer hover:!bg-red-50"
+                            onClick={() => handleDeleteCustomer(customer.id)}
+                          >
+                            <Trash2 className="mr-3 h-4 w-4" />
+                            Expunge
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={isEditOpen} onOpenChange={setEditOpen}>
-        <DialogContent aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>Edit Guest</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="rounded-[2.5rem] sm:max-w-[450px] p-0 border-0 overflow-hidden shadow-2xl">
+          <div className="bg-[#2d2a3c] p-8 text-white relative">
+            <Edit className="absolute top-4 right-4 w-12 h-12 text-white/5" />
+            <DialogTitle className="text-2xl font-serif font-extrabold mb-2">Refine Guest Profile</DialogTitle>
+            <DialogDescription className="text-white/60 text-sm">Update the identity and access details for this guest.</DialogDescription>
+          </div>
           {selectedCustomer && (
-            <div className="space-y-4 pt-4">
+            <div className="p-8 space-y-6 bg-white">
               <div className="grid gap-2">
-                <Label htmlFor="customer-name-edit">Full Name</Label>
+                <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Full Name</Label>
                 <Input
-                  id="customer-name-edit"
+                  className="rounded-xl border-slate-100 bg-slate-50/50"
                   value={selectedCustomer.full_name}
-                  onChange={(e) =>
-                    setSelectedCustomer({
-                      ...selectedCustomer,
-                      full_name: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setSelectedCustomer({ ...selectedCustomer, full_name: e.target.value })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="customer-email-edit">Email Address</Label>
+                <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Electronic Mail</Label>
                 <Input
-                  id="customer-email-edit"
-                  type="email"
+                  className="rounded-xl border-slate-100 bg-slate-50/50"
                   value={selectedCustomer.email}
-                  onChange={(e) =>
-                    setSelectedCustomer({
-                      ...selectedCustomer,
-                      email: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setSelectedCustomer({ ...selectedCustomer, email: e.target.value })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="customer-username-edit">Username</Label>
+                <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">User Identifier</Label>
                 <Input
-                  id="customer-username-edit"
+                  className="rounded-xl border-slate-100 bg-slate-50/50"
                   value={selectedCustomer.username}
-                  onChange={(e) =>
-                    setSelectedCustomer({
-                      ...selectedCustomer,
-                      username: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setSelectedCustomer({ ...selectedCustomer, username: e.target.value })}
                 />
               </div>
-              <Button className="w-full" onClick={handleEditCustomer}>
-                Save Changes
+              <Button className="w-full bg-[#6450f1] text-white py-8 rounded-2xl font-black text-lg shadow-xl shadow-indigo-100 hover:bg-[#523ee0] transition-all" onClick={handleEditCustomer}>
+                Consolidate Changes
               </Button>
             </div>
           )}

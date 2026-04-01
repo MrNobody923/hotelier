@@ -44,6 +44,7 @@ export default function App() {
   const [newRoomData, setNewRoomData] = useState({
     number: "",
     type: "Standard",
+    price: "",
   });
   const [isCreateRoomOpen, setCreateRoomOpen] = useState(false);
 
@@ -55,6 +56,15 @@ export default function App() {
     fetchCustomers();
     fetchBookings();
     fetchFoodOrders();
+
+    // 🚀 REAL-TIME ENGINE: Poll for dynamic data every 5 seconds
+    const syncInterval = setInterval(() => {
+      fetchFoodOrders();
+      fetchBookings();
+      fetchRooms();
+    }, 5000);
+
+    return () => clearInterval(syncInterval);
   }, []);
 
   const fetchRooms = () => {
@@ -92,9 +102,17 @@ export default function App() {
   const fetchFoodOrders = () => {
     axios.get(`${API_BASE_URL}/get_orders.php`)
       .then((res) => {
-        if (Array.isArray(res.data)) setFoodOrders(res.data);
+        if (res.data.error) {
+           console.error("Order fetch error:", res.data.error);
+           toast.error(res.data.error);
+        } else if (Array.isArray(res.data)) {
+           setFoodOrders(res.data);
+        }
       })
-      .catch((err) => console.error("Error fetching food orders:", err));
+      .catch((err) => {
+        console.error("Error fetching food orders:", err);
+        toast.error("Failed to fetch food orders");
+      });
   };
 
   const fetchMenu = () => {
@@ -188,6 +206,23 @@ export default function App() {
       });
   };
 
+  const handleUpdateOrderStatus = (orderId, newStatus) => {
+    axios
+      .post(`${API_BASE_URL}/update_order_status.php`, { id: orderId, status: newStatus })
+      .then((res) => {
+        if (res.data.status === "success") {
+          toast.success(`Order #${orderId} updated to ${newStatus}`);
+          fetchFoodOrders(); // Refresh local list
+        } else {
+          toast.error(res.data.message || "Failed to update order status");
+        }
+      })
+      .catch((err) => {
+        console.error("Error updating order status:", err);
+        toast.error("Failed to update order status");
+      });
+  };
+
   const handleOrder = (orderData) => {
     if (!orderData || !orderData.room_number) return; 
 
@@ -204,11 +239,13 @@ export default function App() {
   };
 
   const handleBooking = (roomId) => {
+    const bookingPayload = {
+      ...formData,
+      guest_name: user?.role === 'customer' ? user.full_name : formData.guest_name,
+      room_id: roomId,
+    };
     axios
-      .post(`${API_BASE_URL}/make_reservation.php`, {
-        ...formData,
-        room_id: roomId,
-      })
+      .post(`${API_BASE_URL}/make_reservation.php`, bookingPayload)
       .then(() => {
         toast.success("Room Reserved and Status Updated!");
         updateRoomStatus(roomId, "Occupied");
@@ -261,6 +298,20 @@ export default function App() {
       });
   };
 
+  const handleEditRoom = (roomData) => {
+    axios
+      .post(`${API_BASE_URL}/edit_room.php`, roomData)
+      .then(() => {
+        setRooms(rooms.map(r => r.id === roomData.id ? { ...r, ...roomData } : r));
+        fetchRooms();
+        toast.success(`Room ${roomData.number} updated successfully`);
+      })
+      .catch((err) => {
+        console.error("Error editing room:", err);
+        toast.error("Failed to update room");
+      });
+  };
+
   const handleCreateRoom = () => {
     if (!newRoomData.number || !newRoomData.type) {
       toast.error("Please fill in all fields for the new room.");
@@ -271,6 +322,7 @@ export default function App() {
       .post(`${API_BASE_URL}/create_room.php`, {
         number: newRoomData.number,
         type: newRoomData.type,
+        price: newRoomData.price,
         status: "Available",
       })
       .then((res) => {
@@ -279,10 +331,11 @@ export default function App() {
           number: parseInt(newRoomData.number),
           status: "Available",
           type: newRoomData.type,
+          price: newRoomData.price,
         };
         setRooms([...rooms, newRoom]);
         setCreateRoomOpen(false);
-        setNewRoomData({ number: "", type: "Standard" });
+        setNewRoomData({ number: "", type: "Standard", price: "" });
         toast.success("Room created successfully!");
       })
       .catch((err) => {
@@ -490,6 +543,7 @@ export default function App() {
               user={user}
               handleBooking={handleBooking}
               updateRoomStatus={updateRoomStatus}
+              handleEditRoom={handleEditRoom}
               handleCreateRoom={handleCreateRoom}
               isCreateRoomOpen={isCreateRoomOpen}
               setCreateRoomOpen={setCreateRoomOpen}
@@ -505,8 +559,11 @@ export default function App() {
             <Restaurant 
               menu={menu} 
               handleOrder={handleOrder} 
+              handleUpdateOrderStatus={handleUpdateOrderStatus}
               user={user} 
               orders={foodOrders}
+              rooms={rooms}
+              bookings={bookings}
               handleCreateMenuItem={handleCreateMenuItem}
               handleEditMenuItem={handleEditMenuItem}
               handleDeleteMenuItem={handleDeleteMenuItem}

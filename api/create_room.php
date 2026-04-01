@@ -28,6 +28,7 @@ try {
       id INT AUTO_INCREMENT PRIMARY KEY,
       number VARCHAR(50) UNIQUE,
       type VARCHAR(100),
+      price DECIMAL(10,2) DEFAULT 0.00,
       status VARCHAR(50) DEFAULT 'Available'
     )";
     $pdo->exec($sqlCreate);
@@ -50,12 +51,15 @@ try {
             exit;
         }
 
+        $roomPrice = $data['price'] ?? 0;
+        
         // Prepare an SQL statement to prevent SQL injection
-        $stmt = $pdo->prepare("INSERT INTO rooms (number, type, status) VALUES (:number, :type, :status)");
+        $stmt = $pdo->prepare("INSERT INTO rooms (number, type, price, status) VALUES (:number, :type, :price, :status)");
         
         $stmt->execute([
             ':number' => $roomNumber,
             ':type' => $roomType,
+            ':price' => $roomPrice,
             ':status' => $roomStatus
         ]);
 
